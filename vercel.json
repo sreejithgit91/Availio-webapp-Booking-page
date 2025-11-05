@@ -1,26 +1,20 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "cd booking-app && npm install && npm run build",
+  "outputDirectory": "booking-app/dist",
+  "installCommand": "cd booking-app && npm install",
+  "framework": null,
+  "rewrites": [
     {
-      "src": "booking-app/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "/booking-app/dist/assets/$1"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "src": "/vite.svg",
-      "dest": "/booking-app/dist/vite.svg"
+      "source": "/vite.svg",
+      "destination": "/vite.svg"
     },
     {
-      "src": "/(.*)",
-      "dest": "/booking-app/dist/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
