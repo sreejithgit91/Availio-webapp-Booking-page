@@ -33,6 +33,9 @@ const App: React.FC = () => {
   const [isCalendarEnabled, setIsCalendarEnabled] = useState(true) // Calendar toggle state
   const [activeLocation, setActiveLocation] = useState<'Sports Ground' | 'Tennis Outdoor'>('Sports Ground')
   
+  // Mobile detection state
+  const [isMobile, setIsMobile] = useState(false)
+  
   // Booking system states
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [bookingData, setBookingData] = useState<BookingData | null>(null)
@@ -94,6 +97,20 @@ const App: React.FC = () => {
     setIsAdvanceBookingModalOpen(false)
   }
 
+  // Mobile detection effect
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+    }
+    
+    // Check on mount
+    checkMobile()
+    
+    // Check on resize
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+  
   // Debug effect to monitor drawer state
   useEffect(() => {
     console.log('Drawer state changed:', isDrawerOpen)
@@ -861,18 +878,30 @@ const App: React.FC = () => {
             className="drawer-content drawer-mobile-fullscreen"
             style={{
               position: 'fixed',
-              bottom: 0,
+              ...(isMobile ? {
+                top: 0,
+                bottom: 0,
+                height: '100vh',
+                maxHeight: '100vh',
+                borderRadius: 0,
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
+                padding: '20px',
+                animation: 'none'
+              } : {
+                bottom: 0,
+                maxHeight: '80vh',
+                borderTopLeftRadius: '10px',
+                borderTopRightRadius: '10px',
+                padding: '20px 40px',
+                animation: 'slideUp 0.3s ease-out'
+              }),
               left: 0,
               right: 0,
               width: '100vw',
               backgroundColor: 'white',
-              borderTopLeftRadius: '10px',
-              borderTopRightRadius: '10px',
-              padding: '20px 40px',
-              maxHeight: '80vh',
               overflowY: 'auto',
               zIndex: 9999,
-              animation: 'slideUp 0.3s ease-out',
               boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)'
             }}
             onClick={(e) => e.stopPropagation()}
