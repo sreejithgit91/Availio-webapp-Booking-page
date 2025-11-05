@@ -332,11 +332,14 @@ const App: React.FC = () => {
               right: 0 !important;
               height: 100vh !important;
               max-height: 100vh !important;
+              min-height: 100vh !important;
               width: 100vw !important;
               border-radius: 0 !important;
               border-top-left-radius: 0 !important;
               border-top-right-radius: 0 !important;
               padding: 20px !important;
+              transform: none !important;
+              animation: none !important;
             }
           }
         `}
