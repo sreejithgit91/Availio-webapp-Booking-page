@@ -111,14 +111,12 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
     })
   }
 
-  // Handle adding guests to participants list
+  // Handle adding guests to participants list (auto-close on success)
   const handleAddGuest = () => {
     if (guestName.trim() && guestSurname.trim() && guestEmail.trim()) {
       const currentGuestCount = selectedEventParticipants.filter(p => p.type === 'guest').length
-      console.log('Current guest count before adding:', currentGuestCount, 'Max allowed:', MAX_GUESTS_PER_BOOKING)
       
       if (currentGuestCount >= MAX_GUESTS_PER_BOOKING) {
-        console.log('Guest quota reached! Cannot add more guests.')
         return // Don't add if quota reached
       }
       
@@ -133,8 +131,8 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
       setGuestName('')
       setGuestSurname('')
       setGuestEmail('')
-      setPlayerType('members') // Reset to members tab
-      console.log('Guest added successfully. New count:', currentGuestCount + 1)
+      // Auto-close modal on success
+      setIsAddPlayersOpen(false)
     }
   }
 
@@ -151,9 +149,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
 
   // Handle + Add button click
   const handleAddPlayers = () => {
-    console.log('Add Players button clicked!')
     setIsAddPlayersOpen(true)
-    console.log('Modal state set to:', true)
   }
 
   // Handle select players button click
@@ -676,9 +672,42 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
               )}
             </div>
           </div>
+          {/* Quota banner on booking screen when reached */}
+          {selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING && (
+            <div style={{ 
+              marginBottom: '10px', 
+              padding: '10px', 
+              backgroundColor: '#fef3c7', 
+              borderRadius: '6px',
+              border: '1px solid #f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              <span style={{ fontSize: '12px', color: '#92400e', fontWeight: 600 }}>
+                Your Guest limit reached for the day. Will get reset tomorrow.
+              </span>
+              <span style={{ color: '#92400e' }}>•</span>
+              <button
+                onClick={() => alert('Navigate to View bookings')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#92400e',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                View bookings
+              </button>
+            </div>
+          )}
+
           <div style={styles.drawerButtonRow}>
-            {samplePlayers.map((player) => (
-              <div key={player.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative' }}>
+            {/* Render currently selected participants as round icons with removable red cross */}
+            {selectedEventParticipants.map((p) => (
+              <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative' }}>
                 <div style={{ position: 'relative' }}>
                   <button
                     style={{
@@ -686,29 +715,15 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
                       height: '60px',
                       borderRadius: '50%',
                       border: '2px solid #ddd',
-                      background: selectedMemberType === player.name ? '#007bff' : '#f8f9fa',
+                      background: '#f8f9fa',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      color: selectedMemberType === player.name ? 'white' : '#333'
+                      cursor: 'default',
+                      color: '#333'
                     }}
-                    aria-label={`Select ${player.name}`}
-                    title={`Select ${player.name}`}
-                    onClick={() => setSelectedMemberType(player.name)}
-                    onMouseEnter={(e) => {
-                      if (selectedMemberType !== player.name) {
-                        e.currentTarget.style.borderColor = '#007bff'
-                        e.currentTarget.style.background = '#e3f2fd'
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedMemberType !== player.name) {
-                        e.currentTarget.style.borderColor = '#ddd'
-                        e.currentTarget.style.background = '#f8f9fa'
-                      }
-                    }}
+                    aria-label={p.name}
+                    title={p.name}
                   >
                     <User size={24} />
                   </button>
@@ -729,26 +744,12 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
                       color: 'white',
                       fontSize: '10px',
                       fontWeight: 'bold',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                      transition: 'all 0.2s ease'
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                     }}
-                    aria-label={`Remove ${player.name}`}
-                    title={`Remove ${player.name}`}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      // Remove the player logic here
-                      console.log('Remove player:', player.name)
-                      if (selectedMemberType === player.name) {
-                        setSelectedMemberType('')
-                      }
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#c82333'
-                      e.currentTarget.style.transform = 'scale(1.1)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = '#dc3545'
-                      e.currentTarget.style.transform = 'scale(1)'
+                    aria-label={`Remove ${p.name}`}
+                    title={`Remove ${p.name}`}
+                    onClick={() => {
+                      setSelectedEventParticipants(prev => prev.filter(x => x.id !== p.id))
                     }}
                   >
                     ×
@@ -765,7 +766,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
                   whiteSpace: 'nowrap',
                   fontFamily: "'Segoe UI', Arial, sans-serif"
                 }}>
-                  {player.name}
+                  {p.name}
                 </span>
               </div>
             ))}
@@ -776,24 +777,26 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
                   height: '60px',
                   borderRadius: '50%',
                   border: '2px solid #ddd',
-                  background: '#f8f9fa',
+                  background: (selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) ? '#f3f4f6' : '#f8f9fa',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: (selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s ease',
-                  color: '#333',
+                  color: (selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) ? '#9ca3af' : '#333',
                   fontSize: '20px',
                   fontWeight: 'bold'
                 }}
                 aria-label="Add player"
                 title="Add player"
-                onClick={handleAddPlayers}
+                onClick={() => { if (selectedEventParticipants.filter(p => p.type === 'guest').length < MAX_GUESTS_PER_BOOKING) setIsAddPlayersOpen(true) }}
                 onMouseEnter={(e) => {
+                  if (selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) return
                   e.currentTarget.style.borderColor = '#007bff'
                   e.currentTarget.style.background = '#e3f2fd'
                 }}
                 onMouseLeave={(e) => {
+                  if (selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) return
                   e.currentTarget.style.borderColor = '#ddd'
                   e.currentTarget.style.background = '#f8f9fa'
                 }}
@@ -811,6 +814,7 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
               </span>
             </div>
           </div>
+          
         </div>
 
         {/* Step 2: Choose Payment Option */}
@@ -893,326 +897,296 @@ const BookingDrawer: React.FC<BookingDrawerProps> = ({
         {currentStep === 'step1' ? renderStep1() : renderStep2()}
       </div>
 
-      {/* Add Players Modal Dialog */}
+      {/* Add Players Modal Dialog (simplified) */}
       {isAddPlayersOpen && (
+        <>
+          {/* Backdrop */}
         <div
           style={{
             position: 'fixed',
             top: 0,
             left: 0,
-            width: '100%',
-            height: '100%',
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-            fontFamily: 'Arial, sans-serif',
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 10000
           }}
           onClick={handleCloseModal}
-        >
+          />
+
+          {/* Modal */}
           <div
             style={{
-              width: '280px',
-              border: '1px solid #000',
-              borderRadius: '8px',
-              padding: '16px',
-              position: 'relative',
-              background: '#fff',
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '32px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              zIndex: 10001,
+              boxShadow: '0 20px 25px rgba(0, 0, 0, 0.2)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <span 
-              className="close-btn"
-              style={{
-                position: 'absolute',
-                top: '8px',
-                right: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-              onClick={handleCloseModal}
-            >
-              ✖
-            </span>
-            
-            <h3 style={{ marginTop: 0 }}>Add players</h3>
-
-            <div className="section" style={{ marginBottom: '16px' }}>
-              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
-                Members
-              </label>
-              <div className="radio-group" style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <input 
-                  type="radio" 
-                  name="playerType" 
-                  id="members"
-                  checked={playerType === 'members'}
-                  onChange={() => setPlayerType('members')}
-                  style={{ marginRight: '8px', marginTop: '5px' }}
-                  aria-label="Select Members"
-                />
-                <div 
-                  className="search-box"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    border: '1px solid #000',
-                    padding: '4px 6px',
-                    borderRadius: '4px',
-                    flex: 1,
-                  }}
-                >
-                  <input 
-                    type="text" 
-                    placeholder="Search" 
-                    value={memberSearch}
-                    onChange={(e) => setMemberSearch(e.target.value)}
-                    style={{ border: 'none', outline: 'none', flex: 1 }}
-                  />
-                  <span 
-                    className="mic"
-                    style={{ marginLeft: '4px', cursor: 'pointer' }}
-                  >
-                    🎤
-                  </span>
-                </div>
-              </div>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '700', margin: '0 0 8px 0', color: '#111827' }}>
+                Add Players
+              </h2>
+              <p style={{ fontSize: '16px', color: '#6b7280', margin: 0 }}>
+                Add members or guests to your booking
+              </p>
             </div>
 
-            <div className="section" style={{ marginBottom: '16px' }}>
-              <label style={{ fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>
-                Guests
-              </label>
-              
-              {/* Guest Quota Status */}
-              <div style={{ 
-                marginBottom: '12px', 
-                padding: '8px 12px', 
-                backgroundColor: '#f0f9ff', 
-                borderRadius: '4px',
-                border: '1px solid #0e8fc6',
-                fontSize: '12px'
-              }}>
-                <span style={{ color: '#0e8fc6', fontWeight: '600' }}>
-                  Guest Quota: {selectedEventParticipants.filter(p => p.type === 'guest').length} of {MAX_GUESTS_PER_BOOKING} guests added
-                </span>
-                {/* Temporary test button - remove this later */}
-                <button
-                  onClick={() => {
-                    const testGuest = {
-                      id: Date.now().toString(),
-                      name: `Test Guest ${selectedEventParticipants.filter(p => p.type === 'guest').length + 1}`,
-                      surname: 'Test',
-                      email: `test${selectedEventParticipants.filter(p => p.type === 'guest').length + 1}@test.com`,
-                      type: 'guest' as const
-                    }
-                    setSelectedEventParticipants(prev => [...prev, testGuest])
-                  }}
+            {/* Tabs */}
+            <div style={{ display: 'flex', marginBottom: '24px', borderBottom: '1px solid #e5e7eb' }}>
+              <button
+                onClick={() => setPlayerType('members')}
+              style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: playerType === 'members' ? '#0e8fc6' : '#9ca3af',
+                  borderBottom: playerType === 'members' ? '2px solid #0e8fc6' : '2px solid transparent',
+                cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Members
+              </button>
+              <button
+                onClick={() => setPlayerType('guests')}
                   style={{
-                    marginLeft: '8px',
-                    padding: '2px 6px',
-                    backgroundColor: '#0e8fc6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '3px',
-                    fontSize: '10px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  + Test Guest
-                </button>
-              </div>
-              
-              {/* Current Participants Display */}
-              {selectedEventParticipants.length > 0 && (
-                <div style={{ 
-                  marginBottom: '12px', 
-                  padding: '8px 12px', 
-                  backgroundColor: '#f9fafb', 
-                  borderRadius: '4px',
-                  border: '1px solid #e5e7eb'
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                    Current Participants:
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {selectedEventParticipants.map(participant => (
-                      <div key={participant.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 6px',
-                        backgroundColor: participant.type === 'guest' ? '#10b981' : '#0e8fc6',
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontSize: '10px',
-                        fontWeight: '500'
-                      }}>
-                        <span>{participant.name}</span>
-                        <span style={{ fontSize: '8px' }}>
-                          {participant.type === 'guest' ? 'G' : 'M'}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setSelectedEventParticipants(prev => 
-                              prev.filter(p => p.id !== participant.id)
-                            )
-                          }}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '8px',
-                            padding: '0',
-                            marginLeft: '2px'
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Guest Quota Banner */}
-              {selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING && (
-                <div style={{ 
-                  marginBottom: '16px', 
-                  padding: '12px', 
-                  backgroundColor: '#fef3c7', 
-                  borderRadius: '6px',
-                  border: '1px solid #f59e0b',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '600', 
-                    color: '#92400e',
-                    marginBottom: '4px'
-                  }}>
-                    Your guest quota limit reached for the day
-                  </div>
-                  <div style={{ 
-                    fontSize: '12px', 
-                    color: '#92400e',
-                    marginBottom: '8px'
-                  }}>
-                    Will get reset tomorrow
-                  </div>
-                  <button
-                    onClick={() => {
-                      // This would navigate to bookings view in a real app
-                      alert('Navigate to View My Bookings')
-                    }}
+                    flex: 1,
+                  padding: '12px 16px',
+                  border: 'none',
+                  background: 'none',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: playerType === 'guests' ? '#0e8fc6' : '#9ca3af',
+                  borderBottom: playerType === 'guests' ? '2px solid #0e8fc6' : '2px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Guests
+              </button>
+            </div>
+
+            {/* Member Tab */}
+            {playerType === 'members' && (
+              <div style={{ position: 'relative' }}>
+                <div style={{ marginBottom: '8px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Search members..."
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
                     style={{
-                      padding: '6px 12px',
-                      backgroundColor: '#f59e0b',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s ease'
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#d97706'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f59e0b'
-                    }}
-                  >
-                    View my Bookings
-                  </button>
+                  />
                 </div>
-              )}
-              
-              <div className="radio-group" style={{ display: 'flex', alignItems: 'flex-start' }}>
-                <input 
-                  type="radio" 
-                  name="playerType" 
-                  id="guests"
-                  checked={playerType === 'guests'}
-                  onChange={() => setPlayerType('guests')}
-                  style={{ marginRight: '8px', marginTop: '5px' }}
-                  aria-label="Select Guests"
-                  disabled={selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
-                />
-                <div className="guest-inputs" style={{
+                {/* Autocomplete dropdown */}
+                {memberSearch.trim() !== '' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '56px',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.08)',
+                    zIndex: 10002,
+                    maxHeight: '220px',
+                    overflowY: 'auto'
+                  }}>
+                    {samplePlayers
+                      .filter(player => player.name.toLowerCase().includes(memberSearch.toLowerCase()))
+                      .map(player => (
+                        <button
+                          key={player.id}
+                          onClick={() => { handleAddMember(player); setIsAddPlayersOpen(false); setMemberSearch('') }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
+                            padding: '10px 14px', background: 'white', border: 'none', cursor: 'pointer'
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f0f9ff' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white' }}
+                        >
+                          <div style={{ width: '28px', height: '28px', backgroundColor: '#0e8fc6', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600 }}>
+                            {player.name.charAt(0)}
+                </div>
+                          <span style={{ fontSize: '15px', color: '#374151' }}>{player.name}</span>
+                        </button>
+                      ))}
+                    {samplePlayers.filter(p => p.name.toLowerCase().includes(memberSearch.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '10px 14px', color: '#6b7280', fontSize: '14px' }}>No matches</div>
+                    )}
+              </div>
+                )}
+            </div>
+            )}
+
+            {/* Guest Tab */}
+            {playerType === 'guests' && (
+              <div>
+                {/* Quota banner inside dialog when limit reached */}
+                {selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING && (
+                  <div style={{ 
+                    marginBottom: '12px',
+                    padding: '12px 14px',
+                    backgroundColor: '#fef3c7',
+                    border: '1px solid #f59e0b',
+                    borderRadius: '8px',
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#92400e' }}>
+                      You have reached your guest limit for the day. Will reset tomorrow.
+                    </div>
+                    <button
+                      onClick={() => alert('Navigate to View Bookings')}
+                      style={{
+                        marginTop: '8px',
+                        background: 'none',
+                        border: 'none',
+                        color: '#92400e',
+                        textDecoration: 'underline',
+                        cursor: 'pointer',
+                        fontWeight: 600
+                      }}
+                    >
+                      View Bookings
+                    </button>
+                  </div>
+                )}
+
+                {/* Guest Form */}
+                <div style={{ 
                   opacity: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 0.5 : 1,
                   pointerEvents: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'none' : 'auto'
                 }}>
                   <input 
                     type="text" 
-                    placeholder="Name"
+                    placeholder="First Name"
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value)}
-                    disabled={selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
                     style={{
-                      display: 'block',
                       width: '100%',
-                      marginBottom: '6px',
-                      padding: '6px',
-                      border: '1px solid #aaa',
-                      borderRadius: '4px',
+                      padding: '12px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none',
+                      marginBottom: '12px'
                     }}
                   />
                   <input 
                     type="text" 
-                    placeholder="Surname"
+                    placeholder="Last Name"
                     value={guestSurname}
                     onChange={(e) => setGuestSurname(e.target.value)}
-                    disabled={selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
                     style={{
-                      display: 'block',
                       width: '100%',
-                      marginBottom: '6px',
-                      padding: '6px',
-                      border: '1px solid #aaa',
-                      borderRadius: '4px',
+                      padding: '12px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none',
+                      marginBottom: '12px'
                     }}
                   />
                   <input 
                     type="email" 
-                    placeholder="E-Mail"
+                    placeholder="Email"
                     value={guestEmail}
                     onChange={(e) => setGuestEmail(e.target.value)}
-                    disabled={selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
                     style={{
-                      display: 'block',
                       width: '100%',
-                      marginBottom: '6px',
-                      padding: '6px',
-                      border: '1px solid #aaa',
-                      borderRadius: '4px',
+                      padding: '12px 16px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      outline: 'none'
                     }}
                   />
+                  
+                  <button
+                    onClick={handleAddGuest}
+                    disabled={!guestName.trim() || !guestSurname.trim() || !guestEmail.trim() || selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
+                    style={{
+                      width: '100%',
+                      padding: '12px 24px',
+                      backgroundColor: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? '#9ca3af' : '#0e8fc6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      cursor: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'not-allowed' : 'pointer',
+                      transition: 'background-color 0.2s ease',
+                      marginTop: '12px'
+                    }}
+                    onMouseEnter={(e) => {
+                      const quotaReached = selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING
+                      if (!quotaReached && guestName.trim() && guestSurname.trim() && guestEmail.trim()) {
+                        e.currentTarget.style.backgroundColor = '#0d7bb8'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      const quotaReached = selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING
+                      if (!quotaReached && guestName.trim() && guestSurname.trim() && guestEmail.trim()) {
+                        e.currentTarget.style.backgroundColor = '#0e8fc6'
+                      }
+                    }}
+                  >
+                    {selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'Guest Quota Reached' : 'Add Guest'}
+                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
+            {/* Close Button */}
+            <div style={{ marginTop: '24px', textAlign: 'center' }}>
             <button 
-              className="select-btn"
-              onClick={handleSelectPlayers}
-              disabled={playerType === 'guests' && selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
+                onClick={handleCloseModal}
               style={{
-                display: 'block',
-                marginLeft: 'auto',
-                padding: '6px 16px',
-                backgroundColor: (playerType === 'guests' && selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) ? '#9ca3af' : '#ddd',
-                border: '1px solid #000',
-                borderRadius: '4px',
-                cursor: (playerType === 'guests' && selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) ? 'not-allowed' : 'pointer',
-                opacity: (playerType === 'guests' && selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING) ? 0.6 : 1
-              }}
-            >
-              {playerType === 'guests' && selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'Quota Reached' : 'Select'}
+                  padding: '12px 24px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#4b5563'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#6b7280'
+                }}
+              >
+                Close
             </button>
           </div>
         </div>
+        </>
       )}
     </div>
   )

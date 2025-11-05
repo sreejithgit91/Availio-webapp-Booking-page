@@ -48,6 +48,7 @@ const App: React.FC = () => {
   // Advance booking dialog state
   const [isAdvanceBookingModalOpen, setIsAdvanceBookingModalOpen] = useState(false)
   
+  
   // Reference to FullCalendar component for programmatic control
   const calendarRef = useRef<FullCalendar>(null)
 
@@ -183,21 +184,9 @@ const App: React.FC = () => {
     ]
   }
 
-  // Disabled slots (not bookable) shown as background and enforced via selectAllow
-  const generateDisabledSlotsForDate = (date: string) => {
-    // Only Court 3 is disabled for the entire day
-    return [
-      {
-        id: 'd3',
-        resourceId: 'court3',
-        title: 'Not available for your group',
-        start: `${date}T07:00:00`,
-        end: `${date}T22:00:00`,
-        display: 'background' as const,
-        backgroundColor: '#e5e7eb',
-        overlap: false
-      }
-    ]
+  // Generate disabled slots for dates
+  const generateDisabledSlotsForDate = (_date: string) => {
+    return []
   }
 
   // Handle date selection from horizontal picker
@@ -627,31 +616,16 @@ const App: React.FC = () => {
                              info.el.style.pointerEvents = 'none'
                            }
                          }}
-                                                                          selectAllow={(selectInfo) => {
-                            // Prevent selection on Court 3 entirely
-                            const isCourt3 = selectInfo.resource?.id === 'court3'
-                            
-                            // Allow selection on advance-booking blocked dates to show dialog
-                            // No more advance-booking restriction - timeline stays active
-                            return !isCourt3
+                         selectAllow={() => {
+                            // Always allow selection; handlers gate logic
+                            return true
                           }}
                         selectable={true}
                         selectMirror={true}
                                                  eventContent={(arg) => {
                            const event = arg.event
                            if (event.display === 'background') {
-                            // Show message for Court 3 disabled and advance blocked overlays
-                            if (event.getResources()[0]?.id === 'court3' && event.title === 'Not available for your group') {
-                              return {
-                                html: `
-                                  <div style="padding: 12px; font-size: 14px; line-height: 1.3; text-align: center; color: #374151; font-weight: 600;">
-                                    <div style="margin-bottom: 6px; font-size: 18px;">🔒</div>
-                                    <div>Not available for your group</div>
-                                  </div>
-                                `
-                              }
-                            }
-                                                         if (event.title === 'Advance Booking Blocked') {
+                             if (event.title === 'Advance Booking Blocked') {
                                // No text needed - just transparent background overlay
                                return { html: '' }
                              }
@@ -772,7 +746,7 @@ const App: React.FC = () => {
 
                   {/* No Calendar Booking Component */}
                   <NoCalendarBooking
-                    bookingBlocked={isAdvanceBlocked}
+                    bookingBlocked={false}
                     blockedMessage={advanceMessage}
                     onBook={() => {
                       // Reset to calendar mode and close any open drawers
@@ -987,35 +961,9 @@ const App: React.FC = () => {
                <div style={{ marginBottom: '8px' }}>
                  You can book this court up to 4 days in advance.
                </div>
-               <div>
-                 Earliest available date is {getEarliestAvailableDate()}.
-               </div>
+               
              </div>
              
-             {/* Primary Button */}
-             <button
-               onClick={handleUseEarliestDate}
-               style={{
-                 width: '100%',
-                 backgroundColor: '#0e8fc6',
-                 color: 'white',
-                 border: 'none',
-                 borderRadius: '8px',
-                 padding: '12px 24px',
-                 fontSize: '16px',
-                 fontWeight: '600',
-                 cursor: 'pointer',
-                 transition: 'background-color 0.2s ease'
-               }}
-               onMouseEnter={(e) => {
-                 e.currentTarget.style.backgroundColor = '#0d7bb8'
-               }}
-               onMouseLeave={(e) => {
-                 e.currentTarget.style.backgroundColor = '#0e8fc6'
-               }}
-             >
-               Use earliest date
-             </button>
            </div>
          </>
        )}

@@ -5,13 +5,13 @@ interface NoCalendarBookingProps {
   onBook: () => void
   bookingBlocked?: boolean
   blockedMessage?: string
+  onNavigateToEarliestDate?: () => void
 }
 
-const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBlocked = false, blockedMessage }) => {
+const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBlocked = false, blockedMessage, onNavigateToEarliestDate }) => {
   // State for managing section visibility
   const [showCourtSection, setShowCourtSection] = useState(false)
   const [showConfirmationSection, setShowConfirmationSection] = useState(false)
-  const [showCourt3Info, setShowCourt3Info] = useState(false)
   const [showAddPlayersSection, setShowAddPlayersSection] = useState(false)
   const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false)
   const [selectedEventParticipants, setSelectedEventParticipants] = useState<any[]>([])
@@ -77,7 +77,7 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
   
   // Handle start time selection
   const handleStartTimeSelect = (time: string) => {
-    if (bookingBlocked) return
+    // Always allow time selection; courts will handle blocking/locks
     setSelectedStartTime(time)
     setShowCourtSection(true)
   }
@@ -87,13 +87,14 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
     setSelectedCourt(court)
     setSelectedDuration(duration)
     setShowAddPlayersSection(true)
+    setShowConfirmationSection(true)
   }
   
   // Calculate total price
   const selectedCourtData = courts.find(c => c.id === selectedCourt)
   const selectedDurationData = durations.find(d => d.minutes.toString() === selectedDuration)
-  const basePrice = selectedCourtData?.price || 0
-  const durationPrice = selectedDurationData?.price || 0
+  const basePrice = selectedCourtData ? selectedCourtData.price : 0
+  const durationPrice = selectedDurationData ? selectedDurationData.price : 0
   const totalPrice = basePrice + durationPrice
   
   const styles = {
@@ -332,14 +333,12 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
   // Guest management functions
   const handleAddGuest = () => {
     if (guestName.trim() && guestSurname.trim() && guestEmail.trim()) {
-      // Check if adding this guest would exceed the quota
       const currentGuestCount = selectedEventParticipants.filter(p => p.type === 'guest').length
-      
       if (currentGuestCount >= MAX_GUESTS_PER_BOOKING) {
+        // Open quota modal and do not add
         setIsGuestQuotaModalOpen(true)
         return
       }
-      
       const newGuest = {
         id: Date.now().toString(),
         name: guestName.trim(),
@@ -348,10 +347,11 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
         type: 'guest' as const
       }
       setSelectedEventParticipants(prev => [...prev, newGuest])
+      // Reset fields and auto-close dialog
       setGuestName('')
       setGuestSurname('')
       setGuestEmail('')
-      setPlayerType('member') // Reset to member tab
+      setIsParticipantsModalOpen(false)
     }
   }
 
@@ -378,6 +378,10 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
   const handleCloseParticipantsModal = () => {
     setIsParticipantsModalOpen(false)
   }
+
+  // Compute guest quota status
+  const guestCount = selectedEventParticipants.filter(p => p.type === 'guest').length;
+  const guestQuotaReached = guestCount >= MAX_GUESTS_PER_BOOKING;
 
   return (
     <div style={styles.container}>
@@ -413,11 +417,6 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
               key={time}
               style={selectedStartTime === time ? styles.timeButtonSelected : styles.timeButton}
               onClick={() => {
-                if (bookingBlocked) {
-                  // Show advance booking modal instead of selecting time
-                  handleAdvanceBookingModal()
-                  return
-                }
                 handleStartTimeSelect(time)
               }}
               onMouseEnter={(e) => {
@@ -446,33 +445,18 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
           <div style={styles.courtList}>
             {courts.map((court) => {
               const isSelected = selectedCourt === court.id && selectedDuration === '60'
-              const isCourt3 = court.id === 'court3'
               
               return (
                 <div key={court.id} style={styles.courtRow}>
                   <div style={{ ...styles.courtName, marginBottom: 0 }}>{court.name}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <button
-                      style={isCourt3 ? {
-                        ...styles.optionCard,
-                        backgroundColor: '#f3f4f6',
-                        borderColor: '#d1d5db',
-                        color: '#9ca3af',
-                        cursor: 'not-allowed',
-                        opacity: 0.6
-                      } : (isSelected ? styles.optionCardSelected : styles.optionCard)}
+                      style={isSelected ? styles.optionCardSelected : styles.optionCard}
                     onClick={(e) => {
-                        if (isCourt3) return // Prevent clicking on Court 3
                       e.stopPropagation()
-                      if (bookingBlocked) {
-                        // Show advance booking modal instead of selecting court
-                        handleAdvanceBookingModal()
-                        return
-                      }
                       handleCourtDurationSelect(court.id, '60')
                     }}
                     onMouseEnter={(e) => {
-                        if (isCourt3) return // No hover effect for Court 3
                       if (!isSelected) {
                         const btn = e.currentTarget as HTMLButtonElement
                           btn.style.backgroundColor = '#f8fafc'
@@ -481,7 +465,6 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
                       }
                     }}
                     onMouseLeave={(e) => {
-                        if (isCourt3) return // No hover effect for Court 3
                       if (!isSelected) {
                         const btn = e.currentTarget as HTMLButtonElement
                           btn.style.backgroundColor = '#f3f4f6'
@@ -490,77 +473,9 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
                         }
                       }}
                     >
-                      {isCourt3 ? (
-                        <>
-                          <div style={{ fontSize: '16px', marginBottom: '4px' }}>🔒</div>
-                          <div style={{ fontSize: '10px', color: '#9ca3af' }}>Locked</div>
-                        </>
-                      ) : bookingBlocked ? (
-                        <>
-                          <div style={{ fontSize: '16px', marginBottom: '4px' }}>🔒</div>
-                          <div style={{ fontSize: '10px', color: '#9ca3af' }}>Advance</div>
-                        </>
-                      ) : (
-                        <>
-                    <div style={isSelected ? { ...styles.optionPrice, color: '#fff' } : styles.optionPrice}>{`CHF ${durations[0].price.toFixed(2)}`}</div>
-                    <div style={isSelected ? { ...styles.optionMinutes, color: '#fff' } : styles.optionMinutes}>{durations[0].label}</div>
-                        </>
-                      )}
+                    <div style={isSelected ? { ...styles.optionPrice, color: '#fff' } : styles.optionPrice}>{`CHF ${(durations[0]?.price ?? 0).toFixed(2)}`}</div>
+                    <div style={isSelected ? { ...styles.optionMinutes, color: '#fff' } : styles.optionMinutes}>{durations[0]?.label ?? ''}</div>
                   </button>
-                    {isCourt3 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div 
-                          style={{
-                            width: '24px',
-                            height: '24px',
-                            borderRadius: '50%',
-                            backgroundColor: '#0e8fc6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            cursor: 'pointer',
-                            boxShadow: '0 2px 6px rgba(14, 143, 198, 0.35)',
-                            transition: 'all 0.2s ease',
-                            position: 'relative'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.1)'
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(14, 143, 198, 0.5)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)'
-                            e.currentTarget.style.boxShadow = '0 2px 6px rgba(14, 143, 198, 0.35)'
-                          }}
-                          onClick={() => setShowCourt3Info(!showCourt3Info)}
-                        >
-                          <div style={{
-                            color: 'white',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            fontFamily: 'Arial, sans-serif',
-                            lineHeight: 1,
-                            marginTop: '-1px'
-                          }}>
-                            i
-                          </div>
-                        </div>
-                        {showCourt3Info && (
-                          <span 
-                            style={{ 
-                              fontSize: '12px', 
-                              color: '#6b7280', 
-                              fontWeight: '500',
-                              opacity: 1,
-                              transition: 'opacity 0.3s ease'
-                            }}
-                          >
-                            Not available for your user group
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {/* Remove advance-booking lock display - courts are now clickable */}
                   </div>
                 </div>
               )
@@ -583,6 +498,40 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
               {selectedEventParticipants.filter(p => p.type === 'guest').length} of {MAX_GUESTS_PER_BOOKING} guests added
             </div>
           </div>
+          
+          {/* Banner for guest quota limit on booking screen */}
+          {guestQuotaReached && (
+            <div style={{ 
+              marginBottom: '16px', 
+              padding: '16px', 
+              backgroundColor: '#fef3c7', 
+              borderRadius: '8px',
+              border: '1px solid #f59e0b',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
+              <span style={{ fontSize: '14px', color: '#92400e', fontWeight: 600 as const }}>
+                Your Guest limit reached for the day. Will get reset tomorrow.
+              </span>
+              <span style={{ color: '#92400e' }}>•</span>
+              <button
+                onClick={() => alert('Navigate to View bookings')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#92400e',
+                  textDecoration: 'underline',
+                  cursor: 'pointer',
+                  fontWeight: 600 as const
+                }}
+              >
+                View bookings
+              </button>
+            </div>
+          )}
+          
           <div style={{ marginBottom: '20px' }}>
             <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '15px' }}>Current Players</div>
             
@@ -676,26 +625,28 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
                     width: '50px',
                     height: '50px',
                     borderRadius: '50%',
-                    border: '2px dashed #cbd5e1',
-                    background: '#f8fafc',
+                    border: guestQuotaReached ? '2px dashed #e5e7eb' : '2px dashed #cbd5e1',
+                    background: guestQuotaReached ? '#f3f4f6' : '#f8fafc',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: '#64748b',
+                    cursor: guestQuotaReached ? 'not-allowed' : 'pointer',
+                    color: guestQuotaReached ? '#9ca3af' : '#64748b',
                     transition: 'all 0.2s ease'
                   }}
                   onMouseEnter={(e) => {
+                    if (guestQuotaReached) return
                     e.currentTarget.style.borderColor = '#0e8fc6'
                     e.currentTarget.style.background = '#eff6ff'
                     e.currentTarget.style.color = '#0e8fc6'
                   }}
                   onMouseLeave={(e) => {
+                    if (guestQuotaReached) return
                     e.currentTarget.style.borderColor = '#cbd5e1'
                     e.currentTarget.style.background = '#f8fafc'
                     e.currentTarget.style.color = '#64748b'
                   }}
-                  onClick={handleOpenParticipantsModal}
+                  onClick={() => { if (!guestQuotaReached) handleOpenParticipantsModal() }}
                   aria-label="Add new player"
                   title="Add new player"
                 >
@@ -710,26 +661,7 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
             </div>
           </div>
           
-          <button
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#28a745',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease',
-              width: 'auto',
-              alignSelf: 'flex-start'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#218838'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#28a745'}
-            onClick={() => setShowConfirmationSection(true)}
-          >
-            Continue to Payment
-          </button>
+          {/* Continue to Payment button removed – payment section loads automatically */}
         </div>
       )}
 
@@ -840,7 +772,7 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
               <p style={{ fontSize: '16px', color: '#6b7280', margin: 0 }}>
                 Add members or guests to your booking
               </p>
-            </div>
+    </div>
 
             {/* Tabs */}
             <div style={{ display: 'flex', marginBottom: '24px', borderBottom: '1px solid #e5e7eb' }}>
@@ -882,8 +814,8 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
 
             {/* Member Tab */}
             {playerType === 'member' && (
-              <div>
-                <div style={{ marginBottom: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <div style={{ marginBottom: '8px' }}>
                   <input
                     type="text"
                     placeholder="Search members..."
@@ -899,151 +831,85 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
                     }}
                   />
                 </div>
-                
-                {/* Sample members - in real app this would come from API */}
-                <div style={{ marginBottom: '20px' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 12px 0', color: '#374151' }}>
-                    Available Members
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* Autocomplete dropdown */}
+                {memberSearch.trim() !== '' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '56px',
+                    left: 0,
+                    right: 0,
+                    background: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.08)',
+                    zIndex: 10002,
+                    maxHeight: '220px',
+                    overflowY: 'auto'
+                  }}>
                     {samplePlayers
-                      .filter(player => 
-                        player.name.toLowerCase().includes(memberSearch.toLowerCase())
-                      )
+                      .filter(player => player.name.toLowerCase().includes(memberSearch.toLowerCase()))
                       .map(player => (
                         <button
                           key={player.id}
-                          onClick={() => handleAddMember(player)}
+                          onClick={() => { handleAddMember(player); setIsParticipantsModalOpen(false); setMemberSearch('') }}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px 16px',
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            background: 'white',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            width: '100%',
-                            textAlign: 'left'
+                            display: 'flex', alignItems: 'center', gap: '12px', width: '100%',
+                            padding: '10px 14px', background: 'white', border: 'none', cursor: 'pointer'
                           }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = '#0e8fc6'
-                            e.currentTarget.style.backgroundColor = '#f0f9ff'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = '#e5e7eb'
-                            e.currentTarget.style.backgroundColor = 'white'
-                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f0f9ff' }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'white' }}
                         >
-                          <div style={{
-                            width: '32px',
-                            height: '32px',
-                            backgroundColor: '#0e8fc6',
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>
+                          <div style={{ width: '28px', height: '28px', backgroundColor: '#0e8fc6', borderRadius: '50%', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600 as const }}>
                             {player.name.charAt(0)}
                           </div>
-                          <span style={{ fontSize: '16px', color: '#374151' }}>
-                            {player.name}
-                          </span>
+                          <span style={{ fontSize: '15px', color: '#374151' }}>{player.name}</span>
                         </button>
                       ))}
+                    {samplePlayers.filter(p => p.name.toLowerCase().includes(memberSearch.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '10px 14px', color: '#6b7280', fontSize: '14px' }}>No matches</div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
             {/* Guest Tab */}
             {playerType === 'guest' && (
               <div>
-                {/* Guest Quota Status */}
-                <div style={{ 
-                  marginBottom: '16px', 
-                  padding: '12px 16px', 
-                  backgroundColor: '#f0f9ff', 
-                  borderRadius: '8px',
-                  border: '1px solid #0e8fc6'
-                }}>
+                {/* Quota banner inside dialog when limit reached */}
+                {guestQuotaReached && (
                   <div style={{ 
-                    fontSize: '14px', 
-                    fontWeight: '600', 
-                    color: '#0e8fc6',
-                    marginBottom: '4px'
-                  }}>
-                    Guest Quota Status
-                  </div>
-                  <div style={{ 
-                    fontSize: '13px', 
-                    color: '#6b7280'
-                  }}>
-                    {selectedEventParticipants.filter(p => p.type === 'guest').length} of {MAX_GUESTS_PER_BOOKING} guests added
-                  </div>
-                </div>
-                
-                {/* Guest Quota Limit Banner */}
-                {selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING && (
-                  <div style={{ 
-                    marginBottom: '16px', 
-                    padding: '16px', 
-                    backgroundColor: '#fef3c7', 
-                    borderRadius: '8px',
+                    marginBottom: '12px',
+                    padding: '12px 14px',
+                    backgroundColor: '#fef3c7',
                     border: '1px solid #f59e0b',
+                    borderRadius: '8px',
                     textAlign: 'center'
                   }}>
-                    <div style={{ 
-                      fontSize: '16px', 
-                      fontWeight: '600', 
-                      color: '#92400e',
-                      marginBottom: '8px'
-                    }}>
-                      Your guest quota limit reached for the day
-                    </div>
-                    <div style={{ 
-                      fontSize: '14px', 
-                      color: '#92400e',
-                      marginBottom: '12px'
-                    }}>
-                      Will get reset tomorrow
+                    <div style={{ fontSize: '14px', fontWeight: 600 as const, color: '#92400e' }}>
+                      You have reached your guest limit for the day. Will reset tomorrow.
                     </div>
                     <button
-                      onClick={() => {
-                        // This would navigate to bookings view in a real app
-                        alert('Navigate to View My Bookings')
-                      }}
+                      onClick={() => alert('Navigate to View Bookings')}
                       style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#f59e0b',
-                        color: 'white',
+                        marginTop: '8px',
+                        background: 'none',
                         border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        fontWeight: '600',
+                        color: '#92400e',
+                        textDecoration: 'underline',
                         cursor: 'pointer',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#d97706'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#f59e0b'
+                        fontWeight: 600 as const
                       }}
                     >
-                      View my Bookings
+                      View Bookings
                     </button>
                   </div>
                 )}
-                
-                {/* Guest Form - Disabled when quota reached */}
+
+                {/* Guest Form - only keep manual details; disable when quota reached */}
                 <div style={{ 
-                  opacity: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 0.5 : 1,
-                  pointerEvents: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'none' : 'auto'
+                  opacity: guestQuotaReached ? 0.5 : 1,
+                  pointerEvents: guestQuotaReached ? 'none' : 'auto'
                 }}>
                   <input
                     type="text"
@@ -1092,109 +958,38 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
                   
                   <button
                     onClick={handleAddGuest}
-                    disabled={!guestName.trim() || !guestSurname.trim() || !guestEmail.trim() || selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING}
+                    disabled={!guestName.trim() || !guestSurname.trim() || !guestEmail.trim() || guestQuotaReached}
                     style={{
                       width: '100%',
                       padding: '12px 24px',
-                      backgroundColor: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? '#9ca3af' : '#0e8fc6',
+                      backgroundColor: guestQuotaReached ? '#9ca3af' : '#0e8fc6',
                       color: 'white',
                       border: 'none',
                       borderRadius: '8px',
                       fontSize: '16px',
                       fontWeight: '600',
-                      cursor: selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'not-allowed' : 'pointer',
+                      cursor: guestQuotaReached ? 'not-allowed' : 'pointer',
                       transition: 'background-color 0.2s ease',
                       marginTop: '12px'
                     }}
                     onMouseEnter={(e) => {
-                      if (guestName.trim() && guestSurname.trim() && guestEmail.trim() && selectedEventParticipants.filter(p => p.type === 'guest').length < MAX_GUESTS_PER_BOOKING) {
+                      if (!guestQuotaReached && guestName.trim() && guestSurname.trim() && guestEmail.trim()) {
                         e.currentTarget.style.backgroundColor = '#0d7bb8'
                       }
                     }}
                     onMouseLeave={(e) => {
-                      if (guestName.trim() && guestSurname.trim() && guestEmail.trim() && selectedEventParticipants.filter(p => p.type === 'guest').length < MAX_GUESTS_PER_BOOKING) {
+                      if (!guestQuotaReached && guestName.trim() && guestSurname.trim() && guestEmail.trim()) {
                         e.currentTarget.style.backgroundColor = '#0e8fc6'
                       }
                     }}
                   >
-                    {selectedEventParticipants.filter(p => p.type === 'guest').length >= MAX_GUESTS_PER_BOOKING ? 'Guest Quota Reached' : 'Add Guest'}
+                    {guestQuotaReached ? 'Guest Quota Reached' : 'Add Guest'}
                   </button>
                 </div>
-                
-                {/* Remove the old quota reached message since we now have the banner */}
               </div>
             )}
 
-            {/* Current Participants */}
-            {selectedEventParticipants.length > 0 && (
-              <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #e5e7eb' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: '#374151' }}>
-                  Current Participants ({selectedEventParticipants.length})
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedEventParticipants.map(participant => (
-                    <div
-                      key={participant.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px 16px',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        backgroundColor: '#f9fafb'
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          backgroundColor: participant.type === 'member' ? '#0e8fc6' : '#10b981',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '14px',
-                          fontWeight: '600'
-                        }}>
-                          {participant.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: '16px', fontWeight: '500', color: '#374151' }}>
-                            {participant.name} {participant.surname}
-                          </div>
-                          <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                            {participant.type === 'member' ? 'Member' : 'Guest'}
-                          </div>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => handleRemoveParticipant(participant.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#ef4444',
-                          cursor: 'pointer',
-                          fontSize: '18px',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          transition: 'background-color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#fef2f2'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent'
-                        }}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Current Participants list removed from dialog */}
 
             {/* Close Button */}
             <div style={{ marginTop: '24px', textAlign: 'center' }}>
@@ -1313,35 +1108,9 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
               <div style={{ marginBottom: '8px' }}>
                 You can book this court up to 4 days in advance.
               </div>
-              <div>
-                Earliest available date is {getEarliestAvailableDate()}.
-              </div>
             </div>
             
-            {/* Primary Button */}
-            <button
-              onClick={handleUseEarliestDate}
-              style={{
-                width: '100%',
-                backgroundColor: '#0e8fc6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px 24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#0d7bb8'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#0e8fc6'
-              }}
-            >
-              Use earliest date
-            </button>
+            {/* Primary Button removed per requirement */}
           </div>
         </>
       )}
@@ -1468,7 +1237,7 @@ const NoCalendarBooking: React.FC<NoCalendarBookingProps> = ({ onBook, bookingBl
           </div>
         </>
       )}
-      
+
       {/* Add Players Modal */}
     </div>
   )
