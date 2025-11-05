@@ -328,11 +328,15 @@ const App: React.FC = () => {
             .drawer-mobile-fullscreen {
               top: 0 !important;
               bottom: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
               height: 100vh !important;
               max-height: 100vh !important;
+              width: 100vw !important;
               border-radius: 0 !important;
               border-top-left-radius: 0 !important;
               border-top-right-radius: 0 !important;
+              padding: 20px !important;
             }
           }
         `}
