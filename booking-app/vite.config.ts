@@ -5,6 +5,7 @@ import { resolve } from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/',
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
@@ -13,5 +14,10 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false
   }
 }) 

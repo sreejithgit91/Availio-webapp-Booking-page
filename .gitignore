@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+booking-app/node_modules/
+react-booking-app/node_modules/
+
+# Build outputs
+dist/
+booking-app/dist/
+react-booking-app/dist/
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# Database
+*.db
+booking-app/booking.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+
+# Exclude subfolder
+sreejithgit91/
+
