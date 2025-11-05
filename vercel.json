@@ -1,21 +1,12 @@
 {
-  "version": 2,
-  "builds": [
+  "buildCommand": "cd booking-app && npm install && npm run build",
+  "outputDirectory": "booking-app/dist",
+  "installCommand": "cd booking-app && npm install",
+  "framework": "vite",
+  "rewrites": [
     {
-      "src": "booking-app/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
-  "routes": [
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
