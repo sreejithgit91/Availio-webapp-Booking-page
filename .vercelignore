@@ -1,8 +1,9 @@
 node_modules
 booking-app/node_modules
+react-booking-app/node_modules
 booking-app/booking.db
 booking-app/sreejithgit91
-react-booking-app/node_modules
 .DS_Store
 *.log
-
+.env
+.env.local
