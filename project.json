@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd booking-app && npm install && npm run build",
+  "devCommand": "cd booking-app && npm run dev",
+  "installCommand": "cd booking-app && npm install",
+  "outputDirectory": "booking-app/dist",
+  "framework": "vite"
+}
+

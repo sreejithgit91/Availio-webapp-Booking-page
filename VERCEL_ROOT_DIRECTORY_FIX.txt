@@ -1,0 +1,101 @@
+===========================================
+CRITICAL: VERCEL 404 FIX - READ THIS FIRST
+===========================================
+
+The 404 error is happening because Vercel cannot find your application files.
+This is a VERCEL DASHBOARD SETTING issue, not a code issue.
+
+===========================================
+STEP 1: GO TO VERCEL DASHBOARD
+===========================================
+URL: https://vercel.com/dashboard
+Login with your account
+
+===========================================
+STEP 2: SELECT YOUR PROJECT
+===========================================
+Find project: Availio-webapp-Booking-page
+Click on it
+
+===========================================
+STEP 3: GO TO SETTINGS
+===========================================
+Click "Settings" tab (top navigation)
+
+===========================================
+STEP 4: FIND ROOT DIRECTORY
+===========================================
+Scroll down to "General" section
+Look for "Root Directory" field
+If it says "(None)" or empty, you need to set it
+
+===========================================
+STEP 5: SET ROOT DIRECTORY
+===========================================
+Click "Edit" or "Override" button next to Root Directory
+Type exactly: booking-app
+(no quotes, no slashes, just: booking-app)
+Click "Save"
+
+===========================================
+STEP 6: REDEPLOY
+===========================================
+Go to "Deployments" tab
+Find the latest deployment
+Click the three dots (⋯) menu
+Click "Redeploy"
+Wait 2-3 minutes
+
+===========================================
+STEP 7: VERIFY
+===========================================
+After redeploy completes:
+1. Check build logs - should show "Building from booking-app/"
+2. Build should complete successfully
+3. Visit your app URL
+4. 404 should be GONE!
+
+===========================================
+IF YOU DON'T SEE "ROOT DIRECTORY" OPTION:
+===========================================
+
+Option A: Disconnect and Reconnect Repository
+1. Settings → Git
+2. Click "Disconnect"
+3. Click "Connect Git Repository"
+4. Select your GitHub repository
+5. IMPORTANT: During setup, look for "Root Directory"
+6. Set it to: booking-app
+7. Complete setup
+
+Option B: Create New Project
+1. Create new project in Vercel
+2. Connect same GitHub repository
+3. During initial setup, set Root Directory to: booking-app
+4. Deploy
+
+===========================================
+WHY THIS IS REQUIRED:
+===========================================
+Your repository structure:
+├── booking-app/          ← Your app is HERE
+│   ├── package.json
+│   ├── src/
+│   └── dist/            ← Build output is HERE
+├── react-booking-app/
+├── vercel.json
+└── README.md
+
+Vercel by default looks in repository root.
+But your app is in booking-app/ subdirectory.
+Root Directory setting tells Vercel where to look.
+
+===========================================
+THIS CANNOT BE FIXED WITH CODE ALONE!
+===========================================
+The vercel.json file is correct.
+The code is correct.
+You MUST set Root Directory in Vercel dashboard.
+
+===========================================
+
