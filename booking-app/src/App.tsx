@@ -322,6 +322,19 @@ const App: React.FC = () => {
               max-width: none !important;
             }
           }
+          
+          /* Mobile drawer - full screen */
+          @media (max-width: 768px) {
+            .drawer-mobile-fullscreen {
+              top: 0 !important;
+              bottom: 0 !important;
+              height: 100vh !important;
+              max-height: 100vh !important;
+              border-radius: 0 !important;
+              border-top-left-radius: 0 !important;
+              border-top-right-radius: 0 !important;
+            }
+          }
         `}
       </style>
       <div style={{ 
@@ -821,7 +834,7 @@ const App: React.FC = () => {
           
           {/* Drawer - Matches calendar container width and positioning */}
           <div 
-            className="drawer-content"
+            className="drawer-content drawer-mobile-fullscreen"
             style={{
               position: 'fixed',
               bottom: 0,
