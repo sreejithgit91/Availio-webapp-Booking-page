@@ -323,9 +323,9 @@ const App: React.FC = () => {
             }
           }
           
-          /* Mobile drawer - full screen */
+          /* Mobile drawer - full screen - Higher specificity */
           @media (max-width: 768px) {
-            .drawer-mobile-fullscreen {
+            div.drawer-mobile-fullscreen {
               top: 0 !important;
               bottom: 0 !important;
               left: 0 !important;
@@ -337,9 +337,26 @@ const App: React.FC = () => {
               border-radius: 0 !important;
               border-top-left-radius: 0 !important;
               border-top-right-radius: 0 !important;
-              padding: 20px !important;
+              padding: 15px !important;
               transform: none !important;
               animation: none !important;
+              overflow-y: auto !important;
+            }
+            
+            /* Additional specificity for the drawer on mobile */
+            .drawer-content.drawer-mobile-fullscreen {
+              top: 0 !important;
+              height: 100vh !important;
+              max-height: 100vh !important;
+              border-top-left-radius: 0 !important;
+              border-top-right-radius: 0 !important;
+            }
+          }
+          
+          /* Extra small mobile devices */
+          @media (max-width: 480px) {
+            div.drawer-mobile-fullscreen {
+              padding: 15px !important;
             }
           }
         `}
@@ -847,11 +864,11 @@ const App: React.FC = () => {
               bottom: 0,
               left: 0,
               right: 0,
-              width: '100vw', // Full viewport width
+              width: '100vw',
               backgroundColor: 'white',
               borderTopLeftRadius: '10px',
               borderTopRightRadius: '10px',
-              padding: '20px 40px', // Matches main content wrapper padding
+              padding: '20px 40px',
               maxHeight: '80vh',
               overflowY: 'auto',
               zIndex: 9999,
